@@ -422,8 +422,11 @@ class Mapping(SchemaType):
             name = subnode.name
             subval = value.pop(name, null)
             try:
-                result[name] = callback(subnode, subval)
+                callbackresult = callback(subnode, subval)
+                if callbackresult is not required:
+                    result[name] = callbackresult
             except Invalid, e:
+                raise
                 if error is None:
                     error = Invalid(node)
                 error.add(e, num)
@@ -1376,6 +1379,7 @@ class SchemaNode(object):
         self.after_bind = kw.pop('after_bind', None)
         self.__dict__.update(kw)
         self.children = list(children)
+        self.ignore_missing_required = kw.pop('ignore_missing_required', False)
 
     @property
     def required(self):
@@ -1454,7 +1458,7 @@ class SchemaNode(object):
             
         if appstruct is null:
             appstruct = self.missing
-            if appstruct is required:
+            if appstruct is required and not self.ignore_missing_required:
                 raise Invalid(self, _('Required'))
             if isinstance(appstruct, deferred): # unbound schema with deferreds
                 raise Invalid(self, _('Required'))
